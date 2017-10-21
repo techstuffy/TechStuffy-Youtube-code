@@ -1,0 +1,106 @@
+﻿///$tab Main
+SET ThousandSep=',';
+SET DecimalSep='.';
+SET MoneyThousandSep=',';
+SET MoneyDecimalSep='.';
+SET MoneyFormat='£#,##0.00;-£#,##0.00';
+SET TimeFormat='hh:mm:ss';
+SET DateFormat='DD/MM/YYYY';
+SET TimestampFormat='DD/MM/YYYY hh:mm:ss[.fff]';
+SET MonthNames='Jan;Feb;Mar;Apr;May;Jun;Jul;Aug;Sep;Oct;Nov;Dec';
+SET DayNames='Mon;Tue;Wed;Thu;Fri;Sat;Sun';
+
+ 
+///$tab data
+For Each Sheetname in 'Jan$','Feb$','Mar$'
+Spending_temp:
+CrossTable('Spending Category', 'Amount Spent')
+LOAD
+    Date as SpendDate,
+    Food,
+    Petrol,
+    Coffee,
+    Clothes
+FROM '$(data_source)qv_spending_updated.xls'
+(biff, embedded labels, table is $(Sheetname));
+Next
+
+
+budget_temp:
+CrossTable('Budget Category', 'Budget Amount')
+LOAD
+ 
+    Date#("Month",'MMM') as Month,
+    Food,
+    Petrol,
+    Coffee,
+    Clothes
+FROM '$(data_source)qv_spending_updated.xls'
+(biff, embedded labels, table is budget$);
+///$tab fact tables
+
+fact_table:
+LOAD
+	[Amount Spent] as Amount
+	,'Actual' as Type
+	,[Spending Category] as %Category
+	
+	,'Date:'& SpendDate  as %DateKey
+	
+Resident Spending_temp;
+
+
+Concatenate(fact_table)
+LOAD 
+	[Budget Amount] as Amount
+	,'Budget' as Type
+	,[Budget Category]  as %Category
+	
+	,'Month:'& Month(Month) as %DateKey
+	
+Resident budget_temp;
+
+
+///$tab dates
+
+Dates:
+LOAD
+
+Month(MonthStart(SpendDate))  as Month
+,SpendDate as Date
+
+,'Date:'& SpendDate  as %DateKey
+
+Resident Spending_temp;
+
+
+
+Concatenate(Dates)
+Load 
+
+Month(Month) as Month
+,null() as Date
+
+,'Month:'& Month(Month) as %DateKey
+
+Resident budget_temp;
+
+ 
+///$tab category
+//Dimensions
+
+Category:
+LOAD distinct
+[Budget Category] as Category
+,[Budget Category] as %Category
+Resident budget_temp;
+
+LOAD distinct
+[Spending Category] as %Category
+,[Spending Category] as Category
+Resident Spending_temp;
+
+
+DROP TABLE budget_temp;
+
+DROP TABLE Spending_temp;
