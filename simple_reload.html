@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>QLIK RELOAD</h2>
+
+<button type="button"
+onclick="testqs()">
+Click to start</button>
+
+<div id="status">Ready...</div>
+
+<script>
+
+function testqs(){
+
+var reloadtest = "ws://localhost:4848/app/C%3A%5CUsers%5Cmarkod%5CDocuments%5CQlik%5CSense%5CApps%5CMon%5Creloadtest.qvf";
+var ws = new WebSocket(reloadtest);
+var socketStatus = document.getElementById('status');
+ 
+//////////////////////////////////////// OPEN APP ///////////////////////////////////////////////////
+
+var opendoc = 
+{
+	"method": "OpenDoc",
+	"handle": -1,
+	"params": [
+		"C:\\Users\\markod\\Documents\\Qlik\\Sense\\Apps\\Mon\\reloadtest.qvf"
+	],
+	"outKey": -1,
+	"id":1,
+	type:"open"
+	
+};
+
+  
+//////////////////////////////////////// RELOAD APP ///////////////////////////////////////////////////
+	
+var doreload = {
+	"handle": 1,
+	"method": "DoReload",
+	"params": {
+		"qMode": 0,
+		"qPartial": false,
+		"qDebug": false
+	},	
+	   "jsonrpc": "2.0",
+        "id": 2
+};	
+
+
+ 
+
+//////////////////////////////////////// SAVE APP ///////////////////////////////////////////////////
+
+	
+var dosave = {
+	"handle": 1,
+	"method": "DoSave",
+	"params": {
+		"qFileName": "C:\\Users\\markod\\Documents\\Qlik\\Sense\\Apps\\Mon\\reloadtest.qvf"
+	},
+	"id":3,
+	type:"save"
+};	
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+// Receive the response
+ws.onmessage = function (event) {
+
+
+  console.log(event.data); 
+  var msg = JSON.parse(event.data);
+  console.log("RET = "+msg.id);
+  
+
+  switch(msg.id) {
+
+      case 1:
+	console.log("opened app");
+	
+	ws.send(JSON.stringify(doreload));
+	socketStatus.innerHTML = "app opened";
+
+	break;
+
+    case 2:
+	console.log("reloaded app");
+	socketStatus.innerHTML = socketStatus.innerHTML+"<br>app reloaded";
+	ws.send(JSON.stringify(dosave));
+	break;	 
+
+
+	case 3:
+	console.log("saved app");
+	socketStatus.innerHTML = socketStatus.innerHTML+"<br>app saved";
+	console.log("saved qvf - ALL DONE!");
+	break;
+	
+
+	
+	 }
+}
+
+  
+//////////////////////////////////////////////
+
+//Run the first command to open the loader
+ws.onopen = function() {
+	ws.send(JSON.stringify(opendoc));
+}
+
+ ws.onclose = function()
+               { 
+                  // websocket is closed.
+                  console.log("Connection is closed..."); 
+               };
+
+}	
+	
+</script>
+
+
+</body>
+</html> 
